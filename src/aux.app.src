@@ -1,0 +1,11 @@
+{application, aux,
+ [{description, "A set of libraries on top of SASL for logging, configuration, metrics passing and system alarms."},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {applications,
+   [kernel,
+    stdlib
+   ]},
+  {env,[]},
+  {modules, []}
+ ]}.
