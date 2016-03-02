@@ -6,5 +6,8 @@ all: compile
 compile:
 	@rebar3 compile
 
+check:
+	@rebar3 eunit
+
 clean:
 	@rebar3 clean
