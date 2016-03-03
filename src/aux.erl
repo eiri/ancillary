@@ -50,5 +50,9 @@ error(Fmt, Args) ->
 %%====================================================================
 
 notify(Tag, Fmt, Args) ->
-  Msg = {Tag, group_leader(), {self(), Fmt, Args}},
-  gen_event:notify(?MGR, Msg).
+  case catch io_lib_format:fwrite(Fmt, Args) of
+    {'EXIT', _} -> erlang:error(badarg, [Fmt, Args]);
+    _ ->
+      Msg = {Tag, group_leader(), {self(), Fmt, Args}},
+      gen_event:notify(?MGR, Msg)
+  end.
