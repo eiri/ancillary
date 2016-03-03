@@ -2,6 +2,7 @@
 
 -compile({no_auto_import, [error/2]}).
 
+-export([add_handler/0, swap_handler/0]).
 -export([debug/1, debug/2, info/1, info/2]).
 -export([warning/1, warning/2, error/1, error/2]).
 
@@ -10,6 +11,15 @@
 %%====================================================================
 %% API functions
 %%====================================================================
+
+add_handler() ->
+  gen_event:add_handler(?MGR, aux_logger, []).
+
+swap_handler() ->
+  lists:foreach(fun(Handler) ->
+    gen_event:delete_handler(?MGR, Handler, [])
+  end, gen_event:which_handlers(?MGR)),
+  add_handler().
 
 debug(Msg) ->
   debug(Msg, []).
