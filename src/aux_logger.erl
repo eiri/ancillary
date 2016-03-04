@@ -38,12 +38,9 @@ make_writer() ->
   end.
 
 make_formatter() ->
-  fun(Fmt, Args, Opts) ->
-    {type, Type} = lists:keyfind(type, 1, Opts),
-    {pid, Pid} = lists:keyfind(pid, 1, Opts),
-    {time, Now} = lists:keyfind(time, 1, Opts),
-    Time = format_time(Now),
-    io_lib:format("~s ~p [~s] " ++ Fmt, [Time, Pid, Type] ++ Args)
+  fun(Opts) ->
+    Args = [get_value(K, Opts) || K <- [time, pid, type, message]],
+    io_lib:format("~s ~p [~s] ~s", Args)
   end.
 
 format_time({_, _, MSec} = Now) ->
@@ -52,10 +49,17 @@ format_time({_, _, MSec} = Now) ->
     " ~2.10.0B:~2.10.0B:~2.10.0B.~3.10.0B",
     [Y, M, D, Hr, Min, Sec, MSec div 1000]).
 
+get_value(Key, Opts) ->
+  case lists:keyfind(Key, 1, Opts) of
+    {Key, Value} -> Value;
+    false -> undefined
+  end.
+
 display(Fmt, Args, Opts0, #ctx{formatter=Formatter, writer=Writer}) ->
-  Opts = [{time, os:timestamp()}|Opts0],
   spawn(fun() ->
-    Msg = Formatter(Fmt, Args, Opts),
+    Time = format_time(os:timestamp()),
+    Opts = [{message, io_lib:format(Fmt, Args)}, {time, Time}|Opts0],
+    Msg = Formatter(Opts),
     Writer(Msg)
   end).
 
