@@ -3,7 +3,7 @@
 all: compile check
 
 dev: compile with_sandbox
-	@erl -pa ${PWD}/_build/default/lib/*/ebin -pa ${PWD}/sandbox/ebin -name sandbox -hidden -boot start_sasl -run sand
+	@erl -pa ${PWD}/_build/default/lib/*/ebin -pa ${PWD}/sandbox/_build/default/lib/*/ebin -name sandbox -hidden -boot start_sasl -run sand
 
 compile:
 	@rebar3 compile
