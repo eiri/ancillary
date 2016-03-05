@@ -5,5 +5,5 @@ deps
 erl_crash.dump
 ebin
 _build
-_checkouts
+sandbox
 .rebar
