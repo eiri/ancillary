@@ -17,9 +17,14 @@ init(Args) ->
   {ok, #ctx{writer=Writer, formatter=Formatter}}.
 
 handle_event({Type, Gleader, {Pid, Fmt, Args}}, State) ->
-  case type(Type, Fmt) of
-    msg ->
-      Opts = [{gleader, Gleader}, {pid, Pid}, {type, Type}],
+  case type_severity(Type, Fmt) of
+    {msg, Severity} ->
+      Opts = [
+        {pid, Pid},
+        {gleader, Gleader},
+        {type, message},
+        {severity, Severity}
+      ],
       display(Fmt, Args, Opts, State);
     _ ->
       ok
@@ -88,26 +93,27 @@ display(Fmt, Args, Opts0, #ctx{formatter=Formatter, writer=Writer}) ->
     Writer(Msg)
   end).
 
-type(_, crash_report) -> report;
-type(_, supervisor_report) -> report;
-type(_, supervisor) -> report;
-type(_, progress_report) -> report;
-type(_, progress) -> report;
-type(_, std_info) -> report;
-type(_, std_warning) -> report;
-type(_, std_error) -> report;
-type(debug_msg, _) -> msg;
-type(error, _) -> msg;
-type(error_report, _) -> report;
-type(warning_msg, _) -> msg;
-type(warning_report, _) -> msg;
-type(info_msg, _) -> msg;
-type(info_report, _) -> report;
-type(_, _) -> unknown.
+type_severity(_, crash_report) -> {report, error};
+type_severity(_, supervisor_report) -> {report, info};
+type_severity(_, supervisor) -> {report, info};
+type_severity(_, progress_report) -> {report, info};
+type_severity(_, progress) -> {report, info};
+type_severity(_, std_info) -> {report, info};
+type_severity(_, std_warning) -> {report, warning};
+type_severity(_, std_error) -> {report, error};
+type_severity(debug_msg, _) -> {msg, debug};
+type_severity(error, _) -> {msg, error};
+type_severity(error_report, _) -> {report, error};
+type_severity(warning_msg, _) -> {msg, warning};
+type_severity(warning_report, _) -> {report, warning};
+type_severity(info_msg, _) -> {msg, info};
+type_severity(info_report, _) -> {report, info};
+type_severity(_, _) -> {unknown, error}.
 
 map_key(pid) -> "~p";
 map_key(gleader) -> "~p";
 map_key(type) -> "~s";
+map_key(severity) -> "~s";
 map_key(time) -> "~s";
 map_key(message) -> "~s".
 
@@ -147,6 +153,10 @@ make_format_test_() ->
     {"Ignore spaces in vars", ?_assertEqual(
       {ok, "~s - ~s", [time, message]},
       make_format("{ time  } - {message}")
+    )},
+    {"Recognize all keys", ?_assertMatch(
+      {ok, _, [pid, gleader, type, severity, time, message]},
+      make_format("{pid}{gleader}{type}{severity}{time}{message}")
     )}
   ].
 
