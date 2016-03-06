@@ -2,9 +2,9 @@
 
 -behaviour(gen_event).
 
--export([init/1, handle_event/2, terminate/2]).
+-export([init/1, handle_event/2, handle_info/2, terminate/2]).
 
--record(ctx, {writer, formatter}).
+-record(ctx, {writer, formatter, queue=dict:new()}).
 
 %%====================================================================
 %% Callback functions
@@ -26,11 +26,19 @@ handle_event({Type, Gleader, {Pid, Fmt, Args}}, State) ->
         {type, message},
         {severity, Severity}
       ],
-      display(Fmt, Args, Opts, State);
+      NewState = display(Fmt, Args, Opts, State),
+      {ok, NewState};
     _ ->
-      ok
-  end,
-  {ok, State}.
+      {ok, State}
+  end.
+
+handle_info({'DOWN', Ref, process, Pid, normal}, #ctx{queue=Q} = State) ->
+  case dict:find(Ref, Q) of
+    {ok, Pid} ->
+      {ok, State#ctx{queue=dict:erase(Ref, Q)}};
+    error ->
+      {ok, State}
+  end.
 
 terminate(_Args, _State) ->
     ok.
@@ -83,12 +91,14 @@ get_value(Key, Opts) ->
     false -> undefined
   end.
 
-display(Fmt, Args, Opts0, #ctx{formatter=Formatter, writer=Writer} = Ctx) ->
-  spawn(fun() ->
+display(Fmt, Args, Opts0, State) ->
+  #ctx{formatter=Formatter, writer=Writer, queue=Q} = State,
+  {Pid, Ref} = spawn_monitor(fun() ->
     Opts = [{message, io_lib:format(Fmt, Args)}, {time, os:timestamp()}|Opts0],
     Msg = Formatter(Opts),
     Writer(Msg)
-  end).
+  end),
+  State#ctx{queue=dict:store(Ref, Pid, Q)}.
 
 type_severity(_, crash_report) -> {report, error};
 type_severity(_, supervisor_report) -> {report, info};
