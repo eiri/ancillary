@@ -4,7 +4,7 @@
 
 -export([init/1, handle_event/2, handle_info/2, terminate/2]).
 
--record(ctx, {writer, formatter, queue=dict:new()}).
+-record(ctx, {writer, formatter, queue = dict:new()}).
 
 %%====================================================================
 %% Callback functions
@@ -32,7 +32,7 @@ handle_event({Type, Gleader, {Pid, Fmt, Args}}, State) ->
       {ok, State}
   end.
 
-handle_info({'DOWN', Ref, process, Pid, normal}, #ctx{queue=Q} = State) ->
+handle_info({'DOWN', Ref, process, Pid, normal}, #ctx{queue = Q} = State) ->
   case dict:find(Ref, Q) of
     {ok, Pid} ->
       {ok, State#ctx{queue=dict:erase(Ref, Q)}};
@@ -68,7 +68,7 @@ make_format(Format) ->
 
 make_format([], {Fmt, Keys, _}) ->
   {ok, lists:concat(lists:reverse(Fmt)), lists:reverse(Keys)};
-make_format([Token|Rest], {Fmt, Keys, WriteFlag}) ->
+make_format([Token | Rest], {Fmt, Keys, WriteFlag}) ->
   case erl_scan:symbol(Token) of
     '{' ->
       make_format(Rest, {Fmt, Keys, true});
@@ -79,10 +79,10 @@ make_format([Token|Rest], {Fmt, Keys, WriteFlag}) ->
         white_space ->
           make_format(Rest, {Fmt, Keys, true});
         atom ->
-          make_format(Rest, {[map_key(Char)|Fmt], [Char|Keys], true})
+          make_format(Rest, {[map_key(Char) | Fmt], [Char | Keys], true})
       end;
     Char ->
-      make_format(Rest, {[Char|Fmt], Keys, false})
+      make_format(Rest, {[Char | Fmt], Keys, false})
   end.
 
 get_value(Key, Opts) ->
@@ -91,14 +91,17 @@ get_value(Key, Opts) ->
     false -> undefined
   end.
 
-display(Fmt, Args, Opts0, State) ->
-  #ctx{formatter=Formatter, writer=Writer, queue=Q} = State,
+display(Fmt, Args, Opts, State) ->
+  #ctx{formatter = Formatter, writer = Writer, queue = Q} = State,
   {Pid, Ref} = spawn_monitor(fun() ->
-    Opts = [{message, io_lib:format(Fmt, Args)}, {time, os:timestamp()}|Opts0],
-    Msg = Formatter(Opts),
+    MoreOpts = [
+      {message, io_lib:format(Fmt, Args)},
+      {time, os:timestamp()}
+    ],
+    Msg = Formatter(lists:append(Opts, MoreOpts)),
     Writer(Msg)
   end),
-  State#ctx{queue=dict:store(Ref, Pid, Q)}.
+  State#ctx{queue = dict:store(Ref, Pid, Q)}.
 
 type_severity(_, crash_report) -> {report, error};
 type_severity(_, supervisor_report) -> {report, info};
