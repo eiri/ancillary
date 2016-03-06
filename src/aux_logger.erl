@@ -4,7 +4,7 @@
 
 -export([init/1, handle_event/2, terminate/2]).
 
--record(ctx, {writer, formatter, time_format}).
+-record(ctx, {writer, formatter}).
 
 %%====================================================================
 %% Callback functions
@@ -13,9 +13,9 @@
 init(Args) ->
   Writer = make_writer(),
   Format = proplists:get_value(format, Args, "{time} - {message}"),
-  Formatter = make_formatter(Format),
   TimeFormat = proplists:get_value(time_format, Args, "%F %T.%L"),
-  {ok, #ctx{writer=Writer, formatter=Formatter, time_format=TimeFormat}}.
+  Formatter = make_formatter(Format, TimeFormat),
+  {ok, #ctx{writer=Writer, formatter=Formatter}}.
 
 handle_event({Type, Gleader, {Pid, Fmt, Args}}, State) ->
   case type_severity(Type, Fmt) of
@@ -44,10 +44,13 @@ make_writer() ->
     io:format(standard_error, "~s~n", [Msg])
   end.
 
-make_formatter(Format) ->
+make_formatter(Format, TimeFormat) ->
   {ok, Fmt, Keys} = make_format(Format),
   fun(Opts) ->
-    Args = [get_value(K, Opts) || K <- Keys],
+    Args = lists:map(fun
+      (K) when K == time -> strftime:f(get_value(K, Opts), TimeFormat);
+      (K) -> get_value(K, Opts)
+    end, Keys),
     io_lib:format(Fmt, Args)
   end.
 
@@ -82,8 +85,7 @@ get_value(Key, Opts) ->
 
 display(Fmt, Args, Opts0, #ctx{formatter=Formatter, writer=Writer} = Ctx) ->
   spawn(fun() ->
-    Time = strftime:f(os:timestamp(), Ctx#ctx.time_format),
-    Opts = [{message, io_lib:format(Fmt, Args)}, {time, Time}|Opts0],
+    Opts = [{message, io_lib:format(Fmt, Args)}, {time, os:timestamp()}|Opts0],
     Msg = Formatter(Opts),
     Writer(Msg)
   end).
