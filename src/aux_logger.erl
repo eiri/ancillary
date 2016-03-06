@@ -2,7 +2,8 @@
 
 -behaviour(gen_event).
 
--export([init/1, handle_event/2, handle_info/2, terminate/2]).
+-export([init/1, handle_event/2, handle_call/2, handle_info/2]).
+-export([code_change/3, terminate/2]).
 
 -record(ctx, {writer, formatter, queue = dict:new()}).
 
@@ -39,6 +40,12 @@ handle_info({'DOWN', Ref, process, Pid, normal}, #ctx{queue = Q} = State) ->
     error ->
       {ok, State}
   end.
+
+handle_call(Request, _State) ->
+  {remove_handler, {unknown_request, Request}}.
+
+code_change(_OldVsn, State, _Extra) ->
+  {ok, State}.
 
 terminate(_Args, _State) ->
     ok.
