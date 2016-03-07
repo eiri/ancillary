@@ -12,11 +12,9 @@
 %%====================================================================
 
 init(Args) ->
-  Writer = make_writer(),
-  Format = proplists:get_value(format, Args, "{time} - {message}"),
-  TimeFormat = proplists:get_value(time_format, Args, "%F %T.%L"),
-  Formatter = make_formatter(Format, TimeFormat),
-  {ok, #ctx{writer=Writer, formatter=Formatter}}.
+  Formatter = make_callback(formatter, Args),
+  Writer = make_callback(writer, Args),
+  {ok, #ctx{writer = Writer, formatter = Formatter}}.
 
 handle_event({Type, Gleader, {Pid, Fmt, Args}}, State) ->
   case type_severity(Type, Fmt) of
@@ -54,49 +52,11 @@ terminate(_Args, _State) ->
 %% Internal functions
 %%====================================================================
 
-make_writer() ->
-  fun(Msg) ->
-    io:format(standard_error, "~s~n", [Msg])
-  end.
-
-make_formatter(Format, TimeFormat) ->
-  {ok, Fmt, Keys} = make_format(Format),
-  fun(Opts) ->
-    Args = lists:map(fun
-      (K) when K == time -> strftime:f(get_value(K, Opts), TimeFormat);
-      (K) -> get_value(K, Opts)
-    end, Keys),
-    io_lib:format(Fmt, Args)
-  end.
-
-make_format(Format) ->
-  {ok, Tokens, _} = erl_scan:string(Format, 1, [return_white_spaces]),
-  make_format(Tokens, {[], [], false}).
-
-make_format([], {Fmt, Keys, _}) ->
-  {ok, lists:concat(lists:reverse(Fmt)), lists:reverse(Keys)};
-make_format([Token | Rest], {Fmt, Keys, WriteFlag}) ->
-  case erl_scan:symbol(Token) of
-    '{' ->
-      make_format(Rest, {Fmt, Keys, true});
-    '}' ->
-      make_format(Rest, {Fmt, Keys, false});
-    Char when WriteFlag ->
-      case erl_scan:category(Token) of
-        white_space ->
-          make_format(Rest, {Fmt, Keys, true});
-        atom ->
-          make_format(Rest, {[map_key(Char) | Fmt], [Char | Keys], true})
-      end;
-    Char ->
-      make_format(Rest, {[Char | Fmt], Keys, false})
-  end.
-
-get_value(Key, Opts) ->
-  case lists:keyfind(Key, 1, Opts) of
-    {Key, Value} -> Value;
-    false -> undefined
-  end.
+make_callback(Type, Args) ->
+  {Type, Cfg} = lists:keyfind(Type, 1, Args),
+  {module, Mod} = lists:keyfind(module, 1, Cfg),
+  ModArgs = proplists:get_value(args, Cfg, []),
+  erlang:apply(Mod, make, [ModArgs]).
 
 display(Fmt, Args, Opts, State) ->
   #ctx{formatter = Formatter, writer = Writer, queue = Q} = State,
@@ -126,55 +86,3 @@ type_severity(warning_report, _) -> {report, warning};
 type_severity(info_msg, _) -> {msg, info};
 type_severity(info_report, _) -> {report, info};
 type_severity(_, _) -> {unknown, error}.
-
-map_key(pid) -> "~p";
-map_key(gleader) -> "~p";
-map_key(type) -> "~s";
-map_key(severity) -> "~s";
-map_key(time) -> "~s";
-map_key(message) -> "~s".
-
-%%====================================================================
-%% Unit tests
-%%====================================================================
-
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
-
-make_format_test_() ->
-  [
-    {"Parse an empty string", ?_assertEqual(
-      {ok, "", []},
-      make_format("")
-    )},
-    {"Parse no vars string", ?_assertEqual(
-      {ok, "pid time message", []},
-      make_format("pid time message")
-    )},
-    {"Parse one var string", ?_assertEqual(
-      {ok, "time ~p message", [pid]},
-      make_format("time {pid} message")
-    )},
-    {"Parse multi vars string", ?_assertEqual(
-      {ok, "~s (~p) - ~s", [time, pid, message]},
-      make_format("{time} ({pid}) - {message}")
-    )},
-    {"Tolerate integers in a format string", ?_assertEqual(
-      {ok, "~p - 21 - ~s", [pid, message]},
-      make_format("{pid} - 21 - {message}")
-    )},
-    {"Preserve spaces", ?_assertEqual(
-      {ok, "~s   (~p)   -   ~s", [time, pid, message]},
-      make_format("{time}   ({pid})   -   {message}")
-    )},
-    {"Ignore spaces in vars", ?_assertEqual(
-      {ok, "~s - ~s", [time, message]},
-      make_format("{ time  } - {message}")
-    )},
-    {"Recognize all keys", ?_assertMatch(
-      {ok, _, [pid, gleader, type, severity, time, message]},
-      make_format("{pid}{gleader}{type}{severity}{time}{message}")
-    )}
-  ].
-
--endif.
