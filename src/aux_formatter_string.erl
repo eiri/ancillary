@@ -1,5 +1,7 @@
 -module(aux_formatter_string).
 
+-behaviour(aux_formatter).
+
 -export([make/1]).
 
 %%====================================================================
@@ -57,7 +59,6 @@ map_key(type) -> "~s";
 map_key(severity) -> "~s";
 map_key(time) -> "~s";
 map_key(message) -> "~s".
-
 
 %%====================================================================
 %% Unit tests
