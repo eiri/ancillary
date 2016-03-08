@@ -17,9 +17,9 @@ make_callback(Args) ->
 
 make_filter(Args) ->
   TypeFilter = type_filter(Args),
-  SeverityFilter = severity_filter(Args),
-  {ok, fun({Type, Severity}) ->
-    TypeFilter(Type) andalso SeverityFilter(Severity)
+  LevelFilter = level_filter(Args),
+  {ok, fun({Type, Level}) ->
+    TypeFilter(Type) andalso LevelFilter(Level)
   end}.
 
 %%====================================================================
@@ -32,10 +32,10 @@ type_filter(Args) ->
   AcceptedTypes = erlang:apply(Mod, accepted_types, []),
   make_general_filter(AcceptedTypes).
 
-severity_filter(Args) ->
+level_filter(Args) ->
   {formatter, Cfg} = lists:keyfind(formatter, 1, Args),
-  Severities = proplists:get_value(severities, Cfg, '_'),
-  make_general_filter(Severities).
+  Levels = proplists:get_value(levels, Cfg, '_'),
+  make_general_filter(Levels).
 
 make_general_filter('_') ->
   fun(_) -> true end;

@@ -59,7 +59,7 @@ get_value(Key, Opts) ->
 map_key(pid) -> "~p";
 map_key(gleader) -> "~p";
 map_key(type) -> "~s";
-map_key(severity) -> "~s";
+map_key(level) -> "~s";
 map_key(time) -> "~s";
 map_key(message) -> "~s".
 
@@ -101,8 +101,8 @@ make_format_test_() ->
       make_format("{ time  } - {message}")
     )},
     {"Recognize all keys", ?_assertMatch(
-      {ok, _, [pid, gleader, type, severity, time, message]},
-      make_format("{pid}{gleader}{type}{severity}{time}{message}")
+      {ok, _, [pid, gleader, type, level, time, message]},
+      make_format("{pid}{gleader}{type}{level}{time}{message}")
     )}
   ].
 

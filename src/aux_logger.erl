@@ -18,14 +18,14 @@ init(Args) ->
   {ok, #ctx{writer = Writer, formatter = Formatter, filter = Filter}}.
 
 handle_event({Type, Gleader, {Pid, Fmt, Args}}, #ctx{filter = F} = State) ->
-  {_, Severity} = TypeSeverity = type_severity(Type, Fmt),
-  case F(TypeSeverity) of
+  {_, Level} = TypeLevel = type_level(Type, Fmt),
+  case F(TypeLevel) of
     true ->
       Opts = [
         {pid, Pid},
         {gleader, Gleader},
         {type, message},
-        {severity, Severity}
+        {level, Level}
       ],
       NewState = display(Fmt, Args, Opts, State),
       {ok, NewState};
@@ -66,19 +66,19 @@ display(Fmt, Args, Opts, State) ->
   end),
   State#ctx{queue = dict:store(Ref, Pid, Q)}.
 
-type_severity(_, crash_report) -> {report, error};
-type_severity(_, supervisor_report) -> {report, info};
-type_severity(_, supervisor) -> {report, info};
-type_severity(_, progress_report) -> {report, info};
-type_severity(_, progress) -> {report, info};
-type_severity(_, std_info) -> {report, info};
-type_severity(_, std_warning) -> {report, warning};
-type_severity(_, std_error) -> {report, error};
-type_severity(debug_msg, _) -> {message, debug};
-type_severity(error, _) -> {message, error};
-type_severity(error_report, _) -> {report, error};
-type_severity(warning_msg, _) -> {message, warning};
-type_severity(warning_report, _) -> {report, warning};
-type_severity(info_msg, _) -> {message, info};
-type_severity(info_report, _) -> {report, info};
-type_severity(_, _) -> {unknown, error}.
+type_level(_, crash_report) -> {report, error};
+type_level(_, supervisor_report) -> {report, info};
+type_level(_, supervisor) -> {report, info};
+type_level(_, progress_report) -> {report, info};
+type_level(_, progress) -> {report, info};
+type_level(_, std_info) -> {report, info};
+type_level(_, std_warning) -> {report, warning};
+type_level(_, std_error) -> {report, error};
+type_level(debug_msg, _) -> {message, debug};
+type_level(error, _) -> {message, error};
+type_level(error_report, _) -> {report, error};
+type_level(warning_msg, _) -> {message, warning};
+type_level(warning_report, _) -> {report, warning};
+type_level(info_msg, _) -> {message, info};
+type_level(info_report, _) -> {report, info};
+type_level(_, _) -> {unknown, error}.
