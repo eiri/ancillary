@@ -5,29 +5,31 @@
 -export([init/1, handle_event/2, handle_call/2, handle_info/2]).
 -export([code_change/3, terminate/2]).
 
--record(ctx, {writer, formatter, queue = dict:new()}).
+-record(ctx, {writer, formatter, filter, queue = dict:new()}).
 
 %%====================================================================
 %% Callback functions
 %%====================================================================
 
 init(Args) ->
-  Formatter = make_callback(formatter, Args),
-  Writer = make_callback(writer, Args),
-  {ok, #ctx{writer = Writer, formatter = Formatter}}.
+  {ok, Formatter} = aux_formatter:make_callback(Args),
+  {ok, Filter} = aux_formatter:make_filter(Args),
+  {ok, Writer} = aux_writer:make_callback(Args),
+  {ok, #ctx{writer = Writer, formatter = Formatter, filter = Filter}}.
 
-handle_event({Type, Gleader, {Pid, Fmt, Args}}, State) ->
-  case type_severity(Type, Fmt) of
-    {msg, Severity} ->
+handle_event({Type, Gleader, {Pid, Fmt, Args}}, #ctx{filter = F} = State) ->
+  {_, Level} = TypeLevel = type_level(Type, Fmt),
+  case F(TypeLevel) of
+    true ->
       Opts = [
         {pid, Pid},
         {gleader, Gleader},
         {type, message},
-        {severity, Severity}
+        {level, Level}
       ],
       NewState = display(Fmt, Args, Opts, State),
       {ok, NewState};
-    _ ->
+    false ->
       {ok, State}
   end.
 
@@ -52,12 +54,6 @@ terminate(_Args, _State) ->
 %% Internal functions
 %%====================================================================
 
-make_callback(Type, Args) ->
-  {Type, Cfg} = lists:keyfind(Type, 1, Args),
-  {module, Mod} = lists:keyfind(module, 1, Cfg),
-  ModArgs = proplists:get_value(args, Cfg, []),
-  erlang:apply(Mod, make, [ModArgs]).
-
 display(Fmt, Args, Opts, State) ->
   #ctx{formatter = Formatter, writer = Writer, queue = Q} = State,
   {Pid, Ref} = spawn_monitor(fun() ->
@@ -70,19 +66,19 @@ display(Fmt, Args, Opts, State) ->
   end),
   State#ctx{queue = dict:store(Ref, Pid, Q)}.
 
-type_severity(_, crash_report) -> {report, error};
-type_severity(_, supervisor_report) -> {report, info};
-type_severity(_, supervisor) -> {report, info};
-type_severity(_, progress_report) -> {report, info};
-type_severity(_, progress) -> {report, info};
-type_severity(_, std_info) -> {report, info};
-type_severity(_, std_warning) -> {report, warning};
-type_severity(_, std_error) -> {report, error};
-type_severity(debug_msg, _) -> {msg, debug};
-type_severity(error, _) -> {msg, error};
-type_severity(error_report, _) -> {report, error};
-type_severity(warning_msg, _) -> {msg, warning};
-type_severity(warning_report, _) -> {report, warning};
-type_severity(info_msg, _) -> {msg, info};
-type_severity(info_report, _) -> {report, info};
-type_severity(_, _) -> {unknown, error}.
+type_level(_, crash_report) -> {report, error};
+type_level(_, supervisor_report) -> {report, info};
+type_level(_, supervisor) -> {report, info};
+type_level(_, progress_report) -> {report, info};
+type_level(_, progress) -> {report, info};
+type_level(_, std_info) -> {report, info};
+type_level(_, std_warning) -> {report, warning};
+type_level(_, std_error) -> {report, error};
+type_level(debug_msg, _) -> {message, debug};
+type_level(error, _) -> {message, error};
+type_level(error_report, _) -> {report, error};
+type_level(warning_msg, _) -> {message, warning};
+type_level(warning_report, _) -> {report, warning};
+type_level(info_msg, _) -> {message, info};
+type_level(info_report, _) -> {report, info};
+type_level(_, _) -> {unknown, error}.
