@@ -21,7 +21,7 @@ make(Cfg) ->
   end.
 
 accepted_types() ->
-  ['message'].
+  [message].
 
 %%====================================================================
 %% Internal functions

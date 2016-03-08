@@ -34,7 +34,12 @@ type_filter(Args) ->
 
 level_filter(Args) ->
   {formatter, Cfg} = lists:keyfind(formatter, 1, Args),
-  Levels = proplists:get_value(levels, Cfg, '_'),
+  {module, Mod} = lists:keyfind(module, 1, Cfg),
+  DefaultLevels = case erlang:function_exported(Mod, default_levels, 0) of
+    true -> erlang:apply(Mod, default_levels, []);
+    false -> '_'
+  end,
+  Levels = proplists:get_value(levels, Cfg, DefaultLevels),
   make_general_filter(Levels).
 
 make_general_filter('_') ->
