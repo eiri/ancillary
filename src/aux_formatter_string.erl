@@ -2,7 +2,7 @@
 
 -behaviour(aux_formatter).
 
--export([make/1]).
+-export([make/1, accepted_types/0]).
 
 %%====================================================================
 %% Callback functions
@@ -19,6 +19,9 @@ make(Cfg) ->
     end, Keys),
     io_lib:format(Fmt, Args)
   end.
+
+accepted_types() ->
+  ['message'].
 
 %%====================================================================
 %% Internal functions
