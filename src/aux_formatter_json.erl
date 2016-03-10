@@ -25,8 +25,10 @@ accepted_types() ->
 %%====================================================================
 
 make_normalizer('_', TimeFormat) ->
-  Keys = [aux_formatter:get_keys(Type) || Type <- accepted_types()],
-  make_normalizer(lists:append(Keys), TimeFormat);
+  Keys = lists:flatmap(fun(Type) ->
+    aux_formatter:get_keys(Type)
+  end, accepted_types()),
+  make_normalizer(Keys, TimeFormat);
 make_normalizer(Keys, TimeFormat) ->
   fun(Opts) ->
     Data = lists:filtermap(fun({Key, Value}) ->
