@@ -1,4 +1,8 @@
-[{<<"strftimerl">>,
+[{<<"jiffy">>,
+  {git,"https://github.com/davisp/jiffy.git",
+       {ref,"6303ff98aaa3fce625038c8b7af2aa8b802f4742"}},
+  0},
+ {<<"strftimerl">>,
   {git,"https://github.com/kennystone/strftimerl.git",
        {ref,"c72f39c42caa974bf9c7a42ff6e522d09b2ad826"}},
   0}].

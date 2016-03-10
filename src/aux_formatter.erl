@@ -3,7 +3,7 @@
 -callback make(Args :: list()) -> Fun :: fun().
 -callback accepted_types() -> Types :: list() | '_'.
 
--export([make_callback/1, make_filter/1]).
+-export([make_callback/1, make_filter/1, get_keys/1]).
 
 %%====================================================================
 %% API functions
@@ -21,6 +21,11 @@ make_filter(Args) ->
   {ok, fun({Type, Level}) ->
     TypeFilter(Type) andalso LevelFilter(Level)
   end}.
+
+get_keys(message) ->
+  [pid, gleader, type, level, time, message];
+get_keys(_) ->
+  [].
 
 %%====================================================================
 %% Internal functions
